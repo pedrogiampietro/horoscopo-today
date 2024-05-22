@@ -3,6 +3,7 @@ const axios = require("axios");
 const cheerio = require("cheerio");
 const moment = require("moment");
 const { createClient } = require("@supabase/supabase-js");
+const cron = require("node-cron");
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_KEY;
@@ -81,7 +82,8 @@ const saveToSupabase = async ({ whoWasBornToday, alert, horoscopes }) => {
   }
 };
 
-scrapeHoroscope().then((result) => {
+const executeJob = async () => {
+  const result = await scrapeHoroscope();
   if (result) {
     const { whoWasBornToday, alert, horoscopes } = result;
 
@@ -94,4 +96,15 @@ scrapeHoroscope().then((result) => {
   } else {
     console.log("Não foi possível obter os horóscopos.");
   }
+};
+
+// Agendar o cron job para executar todos os dias às 09:00 AM
+cron.schedule("0 9 * * *", () => {
+  console.log("Executando job diário de scraping às 09:00 AM");
+  executeJob();
 });
+
+// Para execução manual
+if (process.env.RUN_ON_START === "true") {
+  executeJob();
+}
