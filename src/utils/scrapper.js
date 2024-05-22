@@ -1,6 +1,7 @@
 const axios = require("axios");
 const cheerio = require("cheerio");
 const moment = require("moment");
+const { supabase } = require("../config/supabase");
 
 const baseUrl = process.env.BASE_URL;
 

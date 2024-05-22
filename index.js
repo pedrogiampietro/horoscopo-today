@@ -8,7 +8,7 @@ app.use(express.json());
 
 app.use("/api/horoscopes", horoscopeRoutes);
 
-cron.schedule("0 0 * * *", async () => {
+cron.schedule("0 9 * * *", async () => {
   try {
     console.log("Executando scraping dos horóscopos...");
     executeJob();
