@@ -1,4 +1,5 @@
 require("dotenv").config();
+const express = require("express");
 const axios = require("axios");
 const cheerio = require("cheerio");
 const moment = require("moment");
@@ -10,6 +11,8 @@ const supabaseKey = process.env.SUPABASE_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 const baseUrl = process.env.BASE_URL;
+
+const app = express();
 
 const getFormattedDate = () => {
   const date = moment().format("YYYY/MM/DD");
@@ -108,3 +111,31 @@ cron.schedule("0 9 * * *", () => {
 if (process.env.RUN_ON_START === "true") {
   executeJob();
 }
+
+// Rota para buscar os horóscopos
+app.get("/api/horoscopes", async (req, res) => {
+  try {
+    const { data: horoscopes, error } = await supabase
+      .from("horoscopes")
+      .select("date, text");
+    if (error) {
+      throw error;
+    }
+
+    if (error) {
+      throw error;
+    }
+    res.json(horoscopes);
+  } catch (error) {
+    console.error("Erro ao buscar horóscopos:", error.message);
+    res.status(500).json({ error: "Erro ao buscar horóscopos" });
+  }
+});
+
+// Porta em que o servidor Express irá escutar
+const PORT = process.env.PORT || 3000;
+
+// Inicia o servidor
+app.listen(PORT, () => {
+  console.log(`Servidor rodando na porta ${PORT}`);
+});
