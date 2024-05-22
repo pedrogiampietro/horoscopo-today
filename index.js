@@ -1,141 +1,24 @@
-require("dotenv").config();
 const express = require("express");
-const axios = require("axios");
-const cheerio = require("cheerio");
-const moment = require("moment");
-const { createClient } = require("@supabase/supabase-js");
+const app = express();
+const horoscopeRoutes = require("./src/routes/horoscope.routes");
+const { executeJob } = require("./src/utils/scrapper");
 const cron = require("node-cron");
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_KEY;
-const supabase = createClient(supabaseUrl, supabaseKey);
+app.use(express.json());
 
-const baseUrl = process.env.BASE_URL;
+app.use("/api/horoscopes", horoscopeRoutes);
 
-const app = express();
-
-const getFormattedDate = () => {
-  const date = moment().format("YYYY/MM/DD");
-  const day = moment().format("DD");
-  const month = moment().format("MM");
-  const year = moment().format("YYYY");
-  return `${year}/${month}/${day}/horoscopo-do-dia-${day}-${month}-${year}`;
-};
-
-const scrapeHoroscope = async () => {
-  const url = baseUrl + getFormattedDate();
+cron.schedule("0 0 * * *", async () => {
   try {
-    const { data } = await axios.get(url);
-    const $ = cheerio.load(data);
-
-    let whoWasBornToday = "";
-    let alert = "";
-    let horoscopes = "";
-
-    const article = $("article.post-details");
-    let captureHoroscopes = false;
-
-    article.find("p").each((i, element) => {
-      const text = $(element).text().trim();
-
-      if (text.startsWith("Quem nasceu hoje")) {
-        whoWasBornToday = `${text}\n${$(element).next("p").text().trim()}`;
-      } else if (text.startsWith("Alerta")) {
-        alert = `${text}\n${$(element).next("p").text().trim()}`;
-      } else if (
-        text.startsWith("Áries") ||
-        text.startsWith("Touro") ||
-        text.startsWith("Gêmeos") ||
-        text.startsWith("Câncer") ||
-        text.startsWith("Leão") ||
-        text.startsWith("Virgem") ||
-        text.startsWith("Libra") ||
-        text.startsWith("Escorpião") ||
-        text.startsWith("Sagitário") ||
-        text.startsWith("Capricórnio") ||
-        text.startsWith("Aquário") ||
-        text.startsWith("Peixes")
-      ) {
-        captureHoroscopes = true;
-        horoscopes += `${text}\n`;
-      } else if (captureHoroscopes) {
-        horoscopes += `${text}\n`;
-      }
-    });
-
-    return { whoWasBornToday, alert, horoscopes };
+    console.log("Executando scraping dos horóscopos...");
+    executeJob();
+    console.log("Scraping concluído.");
   } catch (error) {
-    console.error(`Erro ao acessar a URL ${url}:`, error);
-    return null;
-  }
-};
-
-const saveToSupabase = async ({ whoWasBornToday, alert, horoscopes }) => {
-  const date = moment().format("YYYY-MM-DD");
-  const text = `${whoWasBornToday}\n\n${alert}\n\n${horoscopes}`;
-
-  const { data, error } = await supabase
-    .from("horoscopes")
-    .insert([{ date, text }]);
-
-  if (error) {
-    console.error("Erro ao inserir dados no Supabase:", error);
-  } else {
-    console.log("Dados inseridos com sucesso:", data);
-  }
-};
-
-const executeJob = async () => {
-  const result = await scrapeHoroscope();
-  if (result) {
-    const { whoWasBornToday, alert, horoscopes } = result;
-
-    console.log("Horóscopos de hoje:");
-    console.log(whoWasBornToday);
-    console.log(alert);
-    console.log(horoscopes);
-
-    saveToSupabase(result);
-  } else {
-    console.log("Não foi possível obter os horóscopos.");
-  }
-};
-
-// Agendar o cron job para executar todos os dias às 09:00 AM
-cron.schedule("0 9 * * *", () => {
-  console.log("Executando job diário de scraping às 09:00 AM");
-  executeJob();
-});
-
-// Para execução manual
-if (process.env.RUN_ON_START === "true") {
-  executeJob();
-}
-
-// Rota para buscar os horóscopos
-app.get("/api/horoscopes", async (req, res) => {
-  try {
-    const { data: horoscopes, error } = await supabase
-      .from("horoscopes")
-      .select("date, text");
-    if (error) {
-      throw error;
-    }
-
-    if (error) {
-      throw error;
-    }
-    res.json(horoscopes);
-  } catch (error) {
-    console.error("Erro ao buscar horóscopos:", error.message);
-    res.status(500).json({ error: "Erro ao buscar horóscopos" });
+    console.error("Erro ao executar scraping dos horóscopos:", error.message);
   }
 });
 
-// Porta em que o servidor Express irá escutar
 const PORT = process.env.PORT || 3000;
-
-// Inicia o servidor
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
 });
