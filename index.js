@@ -4,11 +4,11 @@ const cheerio = require("cheerio");
 const moment = require("moment");
 const { createClient } = require("@supabase/supabase-js");
 
-const supabaseUrl = "https://jwljxjwsobpfqbkvhojl.supabase.co";
+const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-const baseUrl = "https://www.dircealves.com.br/da/";
+const baseUrl = process.env.BASE_URL;
 
 const getFormattedDate = () => {
   const date = moment().format("YYYY/MM/DD");
